@@ -17,8 +17,7 @@ export default function FileUploader() {
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState(null)
 
-  const token = process.env.NEXT_PUBLIC_WEB3STORAGE_TOKEN || ''
-  const useServer = process.env.NEXT_PUBLIC_USE_SERVER === 'true'
+  const useServer = true
   const serverUrl = process.env.NEXT_PUBLIC_UPLOAD_SERVER_URL || 'http://localhost:4000'
 
   async function handleUpload(e) {
@@ -26,33 +25,17 @@ export default function FileUploader() {
     setResult(null)
     if (!selected) return setStatus('Pick a file first')
     if (selected.size > MAX_BYTES) return setStatus('File exceeds 60 MB limit')
-    if (!token) return setStatus('Missing Web3.Storage token. See README.')
 
     try {
       setStatus('Uploading...')
-      if (useServer) {
-        // Upload to your server which will forward to Web3.Storage
-        const form = new FormData()
-        form.append('file', selected)
-        const resp = await fetch(`${serverUrl}/upload`, { method: 'POST', body: form })
-        if (!resp.ok) throw new Error('Server upload failed')
-        const data = await resp.json()
-        setResult({ cid: data.cid, url: data.url })
-        setStatus('Upload complete (via proxy)')
-        setProgress(100)
-        return
-      }
-
-      const client = new Web3Storage({ token })
-      const onStoredChunk = (size) => {
-        // web3.storage reports chunk size uploaded; approximate progress
-        setProgress((p) => Math.min(100, p + (size / selected.size) * 100))
-      }
-
-      const cid = await client.put([selected], { onStoredChunk })
-      const url = `https://dweb.link/ipfs/${cid}/${encodeURIComponent(selected.name)}`
-      setResult({ cid, url })
-      setStatus('Upload complete')
+      // Upload to local/remote proxy server which stores files and returns a URL
+      const form = new FormData()
+      form.append('file', selected)
+      const resp = await fetch(`${serverUrl}/upload`, { method: 'POST', body: form })
+      if (!resp.ok) throw new Error('Server upload failed')
+      const data = await resp.json()
+      setResult({ url: data.url, filename: data.filename })
+      setStatus('Upload complete (stored on server)')
       setProgress(100)
     } catch (err) {
       console.error(err)

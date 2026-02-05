@@ -1,6 +1,6 @@
 # File Share (60MB) — Next.js + Web3.Storage
 
-This small app lets users upload a file (max 60 MB) directly from the browser to Web3.Storage (IPFS). It can be hosted on Vercel as a static/Next.js site.
+This small app lets users upload a file (max 60 MB) directly from the browser to a server-side proxy which stores files on the server and returns a public URL. It can be hosted on Vercel for the frontend; the proxy server should be hosted on a platform that accepts file uploads (Cloud Run, Render, DigitalOcean, a VM, etc.).
 
 Quick start (local):
 
@@ -11,33 +11,38 @@ cd file-share-nextjs
 npm install
 ```
 
-2. Create a Web3.Storage API key
-
-- Sign up at https://web3.storage and create an API token.
-- In local development create a `.env.local` with:
-
-```
-NEXT_PUBLIC_WEB3STORAGE_TOKEN=YOUR_TOKEN_HERE
-```
-
-3. Run locally
+3. Run locally (frontend)
 
 ```bash
 npm run dev
 # open http://localhost:3000
 ```
 
-Deploy to Vercel
+Proxy server (stores files locally)
 
-- Push repository to GitHub.
-- In the Vercel dashboard create a new project from the repo.
-- Add environment variable in Vercel Project Settings: `NEXT_PUBLIC_WEB3STORAGE_TOKEN` with the token from Web3.Storage.
-- Deploy. The site will let users upload files directly to Web3.Storage.
+The repository includes a small Express proxy server (`/server`) that stores uploaded files locally and serves them under `/uploads`.
+
+Start the proxy server (separate terminal):
+
+```bash
+cd server
+npm install
+node index.js
+# server listens on http://localhost:4000 by default
+```
+
+Client usage with proxy
+
+Start the frontend with the proxy URL environment var:
+
+```bash
+NEXT_PUBLIC_UPLOAD_SERVER_URL=http://localhost:4000 npm run dev
+```
 
 Notes
-- The upload is done from the user's browser to Web3.Storage — the server (Vercel) does not proxy the file, avoiding server upload size limits.
-- The shareable link uses a public IPFS gateway: `https://dweb.link/ipfs/<CID>/<filename>`.
-- If you want files to remain private or be managed differently, consider adding server-side signed uploads or another storage provider (S3, R2, etc.).
+- This setup stores files on the server's filesystem. It's simple and free but not distributed like IPFS. Ensure you have storage and backups.
+- For production, host the proxy on a server with sufficient disk and configure backups or use object storage (S3, R2) if you need persistence and scalability.
+- Vercel serverless functions are not appropriate for large uploads; use a platform that accepts large multipart uploads for the proxy.
 
 Server-side proxy option (safer token handling)
 
